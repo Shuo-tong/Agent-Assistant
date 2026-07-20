@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小爱 · 多模态聊天</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 740px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            height: 85vh;
+            max-height: 900px;
+        }
+
+        /* ---------- 头部 ---------- */
+        .chat-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .chat-header .avatar {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 18px;
+        }
+        .chat-header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+        .chat-header .badge {
+            background: #e8f4fd;
+            color: #1677ff;
+            font-size: 11px;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        /* ---------- 消息区 ---------- */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            background: #fafbfc;
+        }
+        .chat-messages .msg {
+            display: flex;
+            gap: 10px;
+            max-width: 88%;
+            animation: msgIn 0.25s ease;
+        }
+        .chat-messages .msg.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        .chat-messages .msg.ai {
+            align-self: flex-start;
+        }
+        .chat-messages .msg .bubble {
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 15px;
+            line-height: 1.65;
+            word-break: break-word;
+            white-space: pre-wrap;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .chat-messages .msg.user .bubble {
+            background: #1677ff;
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-messages .msg.ai .bubble {
+            background: #fff;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            border: 1px solid #e8ecf0;
+        }
+        .chat-messages .msg .avatar-icon {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .chat-messages .msg.user .avatar-icon {
+            background: #1677ff;
+            color: #fff;
+        }
+        .chat-messages .msg.ai .avatar-icon {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+        }
+        .chat-messages .msg .file-tag {
+            font-size: 12px;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        .chat-messages .msg.ai .file-tag {
+            background: #f0f2f5;
+            color: #666;
+        }
+        .chat-messages .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            background: #1677ff;
+            margin-left: 2px;
+            vertical-align: text-bottom;
+            animation: blink 0.6s step-end infinite;
+        }
+        .chat-messages .msg.ai .typing-cursor {
+            background: #333;
+        }
+
+        /* ---------- 输入区 ---------- */
+        .chat-input-area {
+            padding: 14px 24px 20px;
+            border-top: 1px solid #eee;
+            flex-shrink: 0;
+        }
+        .file-preview {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #f7f8fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: #555;
+        }
+        .file-preview .file-icon { font-size: 16px; }
+        .file-preview .file-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .file-preview .remove-file {
+            cursor: pointer;
+            color: #999;
+            font-size: 16px;
+            line-height: 1;
+        }
+        .file-preview .remove-file:hover { color: #e53935; }
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .input-row textarea {
+            flex: 1;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 11px 16px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            transition: border 0.2s;
+            min-height: 44px;
+            max-height: 120px;
+            line-height: 1.5;
+        }
+        .input-row textarea:focus {
+            border-color: #1677ff;
+        }
+        .input-row .btn {
+            height: 44px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: background 0.2s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .input-row .btn-upload {
+            width: 44px;
+            background: #f0f2f5;
+            color: #555;
+            font-size: 20px;
+        }
+        .input-row .btn-upload:hover { background: #e0e2e5; }
+        .input-row .btn-send {
+            background: #1677ff;
+            color: #fff;
+            padding: 0 24px;
+        }
+        .input-row .btn-send:hover:not(:disabled) { background: #4096ff; }
+        .input-row .btn-send:disabled {
+            background: #a0c4ff;
+            cursor: not-allowed;
+        }
+
+        /* ---------- 动画 ---------- */
+        @keyframes msgIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* ---------- 滚动条 ---------- */
+        .chat-messages::-webkit-scrollbar { width: 5px; }
+        .chat-messages::-webkit-scrollbar-track { background: transparent; }
+        .chat-messages::-webkit-scrollbar-thumb { background: #d0d5dd; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <!-- 头部 -->
+    <div class="chat-header">
+        <div class="avatar">🤖</div>
+        <h1>小爱</h1>
+        <span class="badge">多模态 · 图片/音频</span>
+    </div>
+
+    <!-- 消息区 -->
+    <div class="chat-messages" id="messageArea">
+        <div class="msg ai">
+            <div class="avatar-icon">🤖</div>
+            <div class="bubble">你好！我是小爱，支持文字、图片和语音聊天。有什么可以帮你的？</div>
+        </div>
+    </div>
+
+    <!-- 输入区 -->
+    <div class="chat-input-area">
+        <div class="file-preview" id="filePreview" style="display:none;">
+            <span class="file-icon" id="fileIcon">📎</span>
+            <span class="file-name" id="fileName"></span>
+            <span class="remove-file" id="removeFile">✕</span>
+        </div>
+        <div class="input-row">
+            <button class="btn btn-upload" id="uploadBtn" title="上传图片或音频">+</button>
+            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp,.bmp,.gif,.wav,.mp3,.ogg,.m4a,.flac" style="display:none;">
+            <textarea id="inputBox" placeholder="输入消息，Enter 发送，Shift+Enter 换行" rows="1"></textarea>
+            <button class="btn btn-send" id="sendBtn">发送</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ======== DOM 引用 ========
+    const messageArea = document.getElementById('messageArea');
+    const inputBox = document.getElementById('inputBox');
+    const sendBtn = document.getElementById('sendBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+    const filePreview = document.getElementById('filePreview');
+    const fileIcon = document.getElementById('fileIcon');
+    const fileName = document.getElementById('fileName');
+    const removeFile = document.getElementById('removeFile');
+
+    let selectedFile = null;       // File 对象
+    let animTimer = null;
+
+    // ======== 自动调整输入框高度 ========
+    inputBox.addEventListener('input', () => {
+        inputBox.style.height = 'auto';
+        inputBox.style.height = Math.min(inputBox.scrollHeight, 120) + 'px';
+    });
+
+    // ======== 上传按钮 ========
+    uploadBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+        const f = fileInput.files[0];
+        if (!f) return;
+        selectedFile = f;
+
+        const isAudio = f.type.startsWith('audio/');
+        fileIcon.textContent = isAudio ? '🎵' : '🖼️';
+        fileName.textContent = f.name;
+
+        filePreview.style.display = 'flex';
+    });
+
+    removeFile.addEventListener('click', () => {
+        selectedFile = null;
+        fileInput.value = '';
+        filePreview.style.display = 'none';
+    });
+
+    // ======== 发送 ========
+    function sendMessage() {
+        const text = inputBox.value.trim();
+        if (!text && !selectedFile) return;
+
+        // 显示用户消息
+        appendMessage(text || (selectedFile ? '[媒体文件]' : ''), 'user');
+        inputBox.value = '';
+        inputBox.style.height = 'auto';
+
+        // 禁用按钮
+        setBusy(true);
+
+        // 创建 AI 回复占位
+        const aiBubble = appendMessage('思考中...', 'ai', true);
+
+        const formData = new FormData();
+        if (text) formData.append('content', text);
+        if (selectedFile) formData.append('file', selectedFile);
+
+        // 通过 Flask 托管时用相对路径，file:// 打开时 fallback 到绝对路径
+        const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:5200' : '';
+        fetch(API_BASE + '/api/chat', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.status === 200) {
+                typewriter(aiBubble, res.data);
+            } else {
+                aiBubble.textContent = '请求失败: ' + (res.error || '未知错误');
+                setBusy(false);
+            }
+        })
+        .catch(err => {
+            aiBubble.textContent = '网络错误，请检查后端服务是否启动';
+            setBusy(false);
+        });
+
+        // 清除文件
+        selectedFile = null;
+        fileInput.value = '';
+        filePreview.style.display = 'none';
+    }
+
+    // ======== 追加消息 ========
+    function appendMessage(text, role, returnBubbleOnly) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'msg ' + role;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar-icon';
+        avatar.textContent = role === 'user' ? '👤' : '🤖';
+        msgDiv.appendChild(avatar);
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+
+        // 文件标签
+        if (selectedFile) {
+            const tag = document.createElement('div');
+            tag.className = 'file-tag';
+            const isAudio = selectedFile.type.startsWith('audio/');
+            tag.textContent = isAudio ? '🎵 语音' : '🖼️ 图片';
+            bubble.appendChild(tag);
+        }
+
+        const textSpan = document.createElement('span');
+        if (role === 'user') {
+            textSpan.textContent = text;
+            bubble.appendChild(textSpan);
+        } else {
+            textSpan.textContent = text;
+            bubble.appendChild(textSpan);
+        }
+
+        msgDiv.appendChild(bubble);
+        messageArea.appendChild(msgDiv);
+
+        // 滚动到底部
+        msgDiv.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+        if (returnBubbleOnly) return textSpan;
+        return msgDiv;
+    }
+
+    // ======== 打字机效果 ========
+    function typewriter(element, fullText) {
+        clearInterval(animTimer);
+        let index = 0;
+
+        // 添加闪烁光标
+        const cursor = document.createElement('span');
+        cursor.className = 'typing-cursor';
+        element.after(cursor);
+
+        animTimer = setInterval(() => {
+            if (index > fullText.length) {
+                clearInterval(animTimer);
+                element.textContent = fullText;
+                if (cursor) cursor.remove();
+                setBusy(false);
+                return;
+            }
+            element.textContent = fullText.substring(0, index);
+            index++;
+        }, 16);
+    }
+
+    // ======== 按钮状态 ========
+    function setBusy(busy) {
+        sendBtn.disabled = busy;
+        sendBtn.textContent = busy ? '发送中...' : '发送';
+        uploadBtn.style.pointerEvents = busy ? 'none' : 'auto';
+        uploadBtn.style.opacity = busy ? 0.5 : 1;
+    }
+
+    // ======== 事件绑定 ========
+    sendBtn.addEventListener('click', sendMessage);
+
+    inputBox.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // 初始聚焦
+    inputBox.focus();
+</script>
+
+</body>
+</html>
